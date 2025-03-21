@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC Video Chat</title>
+  </head>
+  <body>
+    <h1>WebRTC Video Chat</h1>
+    <p>
+      You'll automatically connect to the default room. To join a different
+      room, use the controls below.
+    </p>
+
+    <div id="connectionStatus" class="connection-status disconnected">
+      Connecting to signaling server...
+    </div>
+
+    <div class="video-container">
+      <div class="local-video-container">
+        <h3>Local Stream</h3>
+        <video id="webcamVideo" autoplay playsinline muted></video>
+        <div id="localStatus" class="status-indicator">
+          Waiting for camera...
+        </div>
+      </div>
+
+      <div class="remote-video-container">
+        <h3>Remote Stream</h3>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div id="remoteStatus" class="status-indicator">
+          Waiting for peer...
+        </div>
+      </div>
+    </div>
+
+    <div class="room-controls">
+      <h2>Room Controls</h2>
+      <p>Current Room: <span id="currentRoomDisplay">room_123</span></p>
+      <div class="input-group">
+        <input id="roomInput" placeholder="Enter room ID..." />
+        <button id="joinRoomButton">Join Room</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="hangupButton">Leave Room</button>
+      <button id="refreshButton">Refresh Connection</button>
+    </div>
+
+    <div class="connection-info">
+      <h3>Connection Information</h3>
+      <div id="connectionInfo">Not connected</div>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
