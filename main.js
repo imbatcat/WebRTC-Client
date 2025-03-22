@@ -3,7 +3,7 @@ import * as signalR from "@microsoft/signalr";
 
 // SignalR hub URL
 const url =
-  "https://b267-2405-4803-c69b-4270-85e5-a228-e581-8507.ngrok-free.app";
+  "https://29f9-2405-4803-c69b-4270-21fd-5310-3fd4-5916.ngrok-free.app";
 const hubUrl = url + "/hub/webrtc";
 
 // Debug mode - set to true for additional logging
@@ -298,6 +298,9 @@ function createPeerConnection(connectionId) {
   // Listen for remote tracks
   pc.ontrack = (event) => {
     console.log(`Received remote track from ${connectionId}`, event.streams);
+    console.log(
+      `Track kind: ${event.track.kind}, enabled: ${event.track.enabled}, readyState: ${event.track.readyState}`
+    );
 
     // Use the event's streams directly
     if (event.streams && event.streams[0]) {
@@ -305,6 +308,21 @@ function createPeerConnection(connectionId) {
 
       // Update the remote video display immediately
       updateRemoteVideoDisplay();
+
+      // Ensure audio is enabled and unmuted
+      const audioTracks = remoteStreams[connectionId].getAudioTracks();
+      if (audioTracks.length > 0) {
+        console.log(
+          `Remote audio tracks: ${audioTracks.length}, enabled: ${audioTracks[0].enabled}`
+        );
+        audioTracks.forEach((track) => {
+          track.enabled = true;
+          console.log(`Ensured audio track is enabled: ${track.enabled}`);
+        });
+      } else {
+        console.warn(`No audio tracks received from ${connectionId}`);
+      }
+
       remoteStatusElement.textContent = "Connected";
     } else {
       console.warn(`Received track event without streams from ${connectionId}`);
@@ -448,10 +466,68 @@ function updateRemoteVideoDisplay() {
       `Using remote stream from ${firstStreamId}`,
       remoteStreams[firstStreamId]
     );
+
+    // Check if there are audio tracks and log their status
+    const stream = remoteStreams[firstStreamId];
+    const audioTracks = stream.getAudioTracks();
+    console.log(`Remote stream audio tracks: ${audioTracks.length}`);
+
+    if (audioTracks.length > 0) {
+      console.log(`Audio track info:`, {
+        enabled: audioTracks[0].enabled,
+        muted: audioTracks[0].muted,
+        readyState: audioTracks[0].readyState,
+        id: audioTracks[0].id,
+      });
+    }
+
+    // Ensure remoteVideo has proper audio settings
     remoteVideo.srcObject = remoteStreams[firstStreamId];
+    remoteVideo.muted = false;
+    remoteVideo.volume = 1.0; // Ensure volume is set to maximum
+
+    // Force audio playback
+    remoteVideo.onloadedmetadata = () => {
+      console.log("Remote video metadata loaded, attempting to play");
+
+      // Try to play the video element to initiate audio
+      const playPromise = remoteVideo.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log("Remote stream playing successfully");
+          })
+          .catch((err) => {
+            console.error("Error playing remote stream:", err);
+            // Often this is due to user interaction being required
+            // Add a button to manually enable audio if needed
+            if (!document.getElementById("enableAudioButton")) {
+              const enableAudioButton = document.createElement("button");
+              enableAudioButton.id = "enableAudioButton";
+              enableAudioButton.innerText = "Enable Audio";
+              enableAudioButton.className = "enable-audio-button";
+              enableAudioButton.style.marginTop = "10px";
+
+              enableAudioButton.onclick = () => {
+                remoteVideo.muted = false;
+                remoteVideo
+                  .play()
+                  .catch((e) => console.error("Still can't play:", e));
+                enableAudioButton.style.display = "none";
+              };
+
+              const remoteContainer = document.querySelector(
+                ".remote-video-container"
+              );
+              if (remoteContainer) {
+                remoteContainer.appendChild(enableAudioButton);
+              }
+            }
+          });
+      }
+    };
 
     // Check if the stream has active tracks
-    const stream = remoteStreams[firstStreamId];
     if (
       stream.getVideoTracks().length === 0 &&
       stream.getAudioTracks().length === 0
@@ -459,6 +535,8 @@ function updateRemoteVideoDisplay() {
       remoteStatusElement.textContent = "No media tracks received";
     } else if (stream.getVideoTracks().length === 0) {
       remoteStatusElement.textContent = "Audio only (no video)";
+    } else if (stream.getAudioTracks().length === 0) {
+      remoteStatusElement.textContent = "Video only (no audio)";
     } else {
       remoteStatusElement.textContent = "Connected";
     }
@@ -888,10 +966,68 @@ async function runDiagnostics() {
       videoTracks.length > 0 ? "OK" : "No video"
     }, 
       Audio: ${audioTracks.length > 0 ? "OK" : "No audio"}</p>`;
+
+    // Add audio track details
+    if (audioTracks.length > 0) {
+      localStreamStatus.innerHTML += `<p><small>Audio Track: enabled=${audioTracks[0].enabled}, 
+        muted=${audioTracks[0].muted}, readyState=${audioTracks[0].readyState}</small></p>`;
+    }
   } else {
     localStreamStatus.innerHTML = "<p><b>Local Media:</b> Not available</p>";
   }
   diagnosticsOutput.appendChild(localStreamStatus);
+
+  // Check remote stream
+  const remoteStreamStatus = document.createElement("div");
+  const streamKeys = Object.keys(remoteStreams);
+  if (streamKeys.length > 0) {
+    const firstStream = remoteStreams[streamKeys[0]];
+    const videoTracks = firstStream.getVideoTracks();
+    const audioTracks = firstStream.getAudioTracks();
+
+    remoteStreamStatus.innerHTML = `<p><b>Remote Media:</b> Video: ${
+      videoTracks.length > 0 ? "OK" : "No video"
+    }, Audio: ${audioTracks.length > 0 ? "OK" : "No audio"}</p>`;
+
+    // Add audio element status
+    remoteStreamStatus.innerHTML += `<p><small>Audio Element: muted=${remoteVideo.muted}, 
+      volume=${remoteVideo.volume}, paused=${remoteVideo.paused}</small></p>`;
+
+    // Add audio track details
+    if (audioTracks.length > 0) {
+      remoteStreamStatus.innerHTML += `<p><small>Remote Audio Track: enabled=${audioTracks[0].enabled}, 
+        muted=${audioTracks[0].muted}, readyState=${audioTracks[0].readyState}</small></p>`;
+    }
+
+    // Add audio troubleshooting button
+    const fixAudioButton = document.createElement("button");
+    fixAudioButton.innerHTML = "Fix Audio";
+    fixAudioButton.style.marginTop = "5px";
+    fixAudioButton.onclick = () => {
+      // Attempt to fix common audio issues
+      if (remoteVideo) {
+        remoteVideo.muted = false;
+        remoteVideo.volume = 1.0;
+        remoteVideo
+          .play()
+          .catch((e) => console.warn("Could not force play:", e));
+      }
+
+      // Ensure all audio tracks are enabled
+      if (firstStream) {
+        const audioTracks = firstStream.getAudioTracks();
+        audioTracks.forEach((track) => {
+          track.enabled = true;
+        });
+      }
+
+      runDiagnostics(); // Refresh diagnostics
+    };
+    remoteStreamStatus.appendChild(fixAudioButton);
+  } else {
+    remoteStreamStatus.innerHTML = "<p><b>Remote Media:</b> Not available</p>";
+  }
+  diagnosticsOutput.appendChild(remoteStreamStatus);
 
   // Check peer connections
   const peerStatus = document.createElement("div");
@@ -931,6 +1067,23 @@ async function runDiagnostics() {
   if (connectionIds.length === 0) {
     suggestions.innerHTML +=
       "<li>No peer connections found. Try refreshing the connection or check that another user has joined the room.</li>";
+  }
+
+  // Check for audio issues
+  if (streamKeys.length > 0) {
+    const firstStream = remoteStreams[streamKeys[0]];
+    const audioTracks = firstStream.getAudioTracks();
+
+    if (audioTracks.length === 0) {
+      suggestions.innerHTML +=
+        "<li>No audio tracks detected in the remote stream. This may be because the sender disabled their microphone.</li>";
+    } else if (remoteVideo.muted) {
+      suggestions.innerHTML +=
+        "<li>Remote video element is muted. Click 'Fix Audio' to unmute.</li>";
+    } else if (remoteVideo.volume === 0) {
+      suggestions.innerHTML +=
+        "<li>Remote video volume is set to 0. Click 'Fix Audio' to restore volume.</li>";
+    }
   }
 
   // Failed ICE connections

@@ -97,6 +97,30 @@ video {
   animation: pulse 1.5s infinite;
 }
 
+/* Enable Audio Button */
+.enable-audio-button {
+  background-color: #e91e63;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  width: 80%;
+  margin: 10px auto;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: pulse 1.5s infinite;
+}
+
+.enable-audio-button:hover {
+  background-color: #c2185b;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 /* Buttons */
 button {
   background-color: #4caf50;
