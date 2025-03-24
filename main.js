@@ -2,8 +2,7 @@ import "./style.css";
 import * as signalR from "@microsoft/signalr";
 
 // SignalR hub URL
-const url =
-  "https://29f9-2405-4803-c69b-4270-21fd-5310-3fd4-5916.ngrok-free.app";
+const url = "https://localhost:7096";
 const hubUrl = url + "/hub/webrtc";
 
 // Debug mode - set to true for additional logging
